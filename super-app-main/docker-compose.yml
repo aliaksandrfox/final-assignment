@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:latest
+    container_name: super-app-mysql
+    environment:
+      MYSQL_DATABASE: 'super-app'
+      MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - super-app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js Application
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+    container_name: super-app-node
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=super-app
+    networks:
+      - super-app-network
+
+  # PHP Application
+  php:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: super-app-php
+    ports:
+      - "80:80"
+    networks:
+      - super-app-network
+
+networks:
+  super-app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
